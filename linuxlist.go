@@ -44,13 +44,13 @@ func getFileInfo(path string, skipHashing bool) FileInfo {
 		Size:        info.Size(),
 		Mode:        info.Mode().String(),
 		Permissions: info.Mode().Perm().String(),
-		ModTime:     info.ModTime(),
+		ModTime:     info.ModTime().UTC(),
 		IsDir:       info.IsDir(),
 	}
 
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		fileInfo.AccessTime = time.Unix(stat.Atim.Sec, stat.Atim.Nsec)
-		fileInfo.InodeChangeTime = time.Unix(stat.Ctim.Sec, stat.Ctim.Nsec)
+		fileInfo.AccessTime = time.Unix(stat.Atim.Sec, stat.Atim.Nsec).UTC()
+		fileInfo.InodeChangeTime = time.Unix(stat.Ctim.Sec, stat.Ctim.Nsec).UTC()
 	} else {
 		fileInfo.Error = "Failed to get detailed file information"
 	}
@@ -88,7 +88,7 @@ func listDirectory(dir string, jsonlFile *os.File, logFile *os.File) error {
 	var count int64
 	var errorCount int64
 	var lastLog time.Time
-	startTime := time.Now()
+	startTime := time.Now().UTC()
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -104,7 +104,7 @@ func listDirectory(dir string, jsonlFile *os.File, logFile *os.File) error {
 				atomic.LoadInt64(&count),
 				time.Since(startTime),
 				atomic.LoadInt64(&errorCount))
-			lastLog = time.Now()
+			lastLog = time.Now().UTC()
 		}
 
 		fileInfo := getFileInfo(path, skipHashing)
@@ -162,9 +162,9 @@ func printUsage() {
 	fmt.Println("  size: Size of the file in bytes")
 	fmt.Println("  mode: File mode and permissions")
 	fmt.Println("  permissions: Unix permission string")
-	fmt.Println("  access_time: Last access time")
-	fmt.Println("  mod_time: Last modification time")
-	fmt.Println("  inode_change_time: Last inode change time")
+	fmt.Println("  access_time: Last access time (UTC)")
+	fmt.Println("  mod_time: Last modification time (UTC)")
+	fmt.Println("  inode_change_time: Last inode change time (UTC)")
 	fmt.Println("  is_dir: Boolean indicating if it's a directory")
 	fmt.Println("  sha256: SHA256 hash of file contents (for regular files only)")
 	fmt.Println("  error: Any error encountered while processing the file")
@@ -190,7 +190,7 @@ func main() {
 		return
 	}
 
-	startTime := time.Now()
+	startTime := time.Now().UTC()
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -198,7 +198,7 @@ func main() {
 		hostname = "unknown"
 	}
 
-	timeStamp := startTime.Format("20060102_150405")
+	timeStamp := startTime.Format("20060102_150405Z")
 	logFileName := fmt.Sprintf("%s_%s_linuxlist.log", hostname, timeStamp)
 	jsonlFileName := fmt.Sprintf("%s_%s_linuxlist.jsonl", hostname, timeStamp)
 
@@ -234,7 +234,7 @@ func main() {
 		log.Printf("Error listing directory: %v\n", err)
 	}
 
-	endTime := time.Now()
+	endTime := time.Now().UTC()
 	duration := endTime.Sub(startTime)
 	log.Printf("LinuxList completed at: %s\n", endTime.Format(time.RFC3339))
 	log.Printf("Total run time: %s\n", duration)
